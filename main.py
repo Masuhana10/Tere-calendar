@@ -3,33 +3,42 @@ import json
 from datetime import datetime, timedelta
 import re
 
-# 現在の年月を自動で取得
-current_ym = datetime.now().strftime("%Y%m")
+# 📅 今月と来月の年月を自動計算する
+now = datetime.now()
+current_ym = now.strftime("%Y%m")
+
+# 12月の場合は、来年は「翌年の1月」にする
+if now.month == 12:
+    next_ym = f"{now.year + 1}01"
+else:
+    next_ym = f"{now.year}{now.month + 1:02d}"
+
+# 取得する月のリスト（今月と来月）
+target_months = [current_ym, next_ym]
 
 # 🎯 推しメンのID（池田瑛紗さんは 55397）
 TARGET_MEMBER_ID = "55397"
-
 url = 'https://www.nogizaka46.com/s/n46/api/list/schedule'
-
-# 全員のスケジュールを一括取得
-params = {
-    'ima': '4923',
-    'dy': current_ym,
-    'callback': 'res'
-}
 headers = {'User-Agent': 'Mozilla/5.0'}
 
-print(f"{current_ym[:4]}年{current_ym[4:]}月のスケジュールを取得して、究極のフィルターをかけます...")
-response = requests.get(url, headers=headers, params=params)
-response.encoding = 'utf-8'
+# 取得した全スケジュールを貯める箱
+all_schedule_list = []
 
-json_text = response.text.strip()
-if json_text.startswith('res('): json_text = json_text[4:]
-if json_text.endswith(');'): json_text = json_text[:-2]
-elif json_text.endswith(')'): json_text = json_text[:-1]
+# 今月と来月の2回、通信を繰り返す
+for ym in target_months:
+    print(f"{ym[:4]}年{ym[4:]}月のスケジュールを取得中...")
+    params = {'ima': '4923', 'dy': ym, 'callback': 'res'}
+    response = requests.get(url, headers=headers, params=params)
+    response.encoding = 'utf-8'
 
-data = json.loads(json_text)
-schedule_list = data.get('data', [])
+    json_text = response.text.strip()
+    if json_text.startswith('res('): json_text = json_text[4:]
+    if json_text.endswith(');'): json_text = json_text[:-2]
+    elif json_text.endswith(')'): json_text = json_text[:-1]
+
+    data = json.loads(json_text)
+    # 取得した月のスケジュールを箱に追加
+    all_schedule_list.extend(data.get('data', []))
 
 ics_lines = [
     "BEGIN:VCALENDAR",
@@ -48,14 +57,15 @@ def parse_custom_time(date_str, time_str):
     remaining_hours = hours % 24
     return base_date + timedelta(days=days, hours=remaining_hours, minutes=minutes)
 
-for item in schedule_list:
+# 2ヶ月分のスケジュールをまとめてフィルターにかける！
+for item in all_schedule_list:
     arti_code = item.get('arti_code', [])
     
     # 🛡️【究極のフィルター】
     if not arti_code or TARGET_MEMBER_ID in str(arti_code):
-        pass # チェック合格
+        pass
     else:
-        continue # 他のメンバー単独の予定は捨てる
+        continue
 
     title = item.get('title', 'タイトルなし')
     date_str = item.get('date', '') 
@@ -115,4 +125,6 @@ output_file = 'oshi_schedule.ics'
 with open(output_file, 'w', encoding='utf-8') as f:
     f.write("\n".join(ics_lines))
 
-print(f"\n🎉 完了！カレンダーファイル '{output_file}' を保存しました。")
+print(f"\n🎉 完了！今月と来月のカレンダーファイル '{output_file}' を保存しました。")
+
+
