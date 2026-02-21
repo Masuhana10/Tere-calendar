@@ -1,4 +1,3 @@
-!pip install requests beautifulsoup4 ics pytz
 import requests
 import json
 from datetime import datetime, timedelta
@@ -53,10 +52,8 @@ for item in schedule_list:
     arti_code = item.get('arti_code', [])
     
     # 🛡️【究極のフィルター】
-    # 1. arti_codeが空っぽ（[]）ならグループ全体なのでOK！
-    # 2. arti_codeにてれぱんのIDが含まれていればOK！
     if not arti_code or TARGET_MEMBER_ID in str(arti_code):
-        pass # チェック合格！下の追加処理へ進む
+        pass # チェック合格
     else:
         continue # 他のメンバー単独の予定は捨てる
 
@@ -118,4 +115,4 @@ output_file = 'oshi_schedule.ics'
 with open(output_file, 'w', encoding='utf-8') as f:
     f.write("\n".join(ics_lines))
 
-print(f"\n🎉 完了！カレンダーファイル '{output_file}' をダウンロードしてください。")
+print(f"\n🎉 完了！カレンダーファイル '{output_file}' を保存しました。")
