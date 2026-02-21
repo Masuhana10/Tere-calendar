@@ -2,15 +2,14 @@ name: Update Nogizaka Calendar
 
 on:
   schedule:
-    # 毎日 日本時間の深夜2時（サーバーの標準時で17時）に自動実行
     - cron: '0 17 * * *'
-  workflow_dispatch: # ボタンを押して手動で動かせる機能もオンにする
+  workflow_dispatch:
 
 jobs:
   build:
     runs-on: ubuntu-latest
     permissions:
-      contents: write # 基地にファイルを書き込む権限をロボットに与える
+      contents: write
 
     steps:
       - name: 基地のデータを読み込む
@@ -32,5 +31,9 @@ jobs:
           git config --local user.email "action@github.com"
           git config --local user.name "GitHub Action"
           git add oshi_schedule.ics
-          # 変更があった場合のみ保存（コミット）する
-          git diff --quiet && git diff --staged --quiet || (git commit -m "カレンダーを自動更新しました" && git push)
+          # もし変更があれば、最新状態を取り込んでから保存（push）する！
+          if ! git diff --quiet --staged; then
+            git commit -m "カレンダーを自動更新しました"
+            git pull --rebase origin main
+            git push origin main
+          fi
